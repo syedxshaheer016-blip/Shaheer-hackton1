@@ -1,0 +1,145 @@
+SMART BUS RESERVATION SYSTEM - TEST CASES AND RESULTS
+=====================================================
+Project:  Smart Bus Ticket Booking & Reservation System
+Program:  main.py (console app) with core.py (rules)
+Date:     2026-10-25
+
+How these results were produced
+-------------------------------
+Every test below was run against main.py by typing the inputs (automated in
+test_main.py, which starts main.py and feeds it the exact inputs listed).
+The business rules were also checked directly in test_core.py.
+
+Command:  python3 -m unittest -v
+Result:   Ran 32 tests ... OK   (12 PRD test cases + 1 extra console test + 19 rule tests)
+
+Environments where all 32 tests passed:
+  - macOS, Python 3.14.8
+  - macOS, Python 3.9.6
+  - Linux (Debian GNU/Linux 13, aarch64, Docker image python:3.12-slim), Python 3.12.15
+
+Each test uses a fresh program start (empty bookings), as the PRD recommends.
+"Actual result" is the real text printed by main.py.
+
+------------------------------------------------------------------
+TC-01 | View all routes
+Input/Action:    Menu 1
+Expected Result: All five routes and seat status appear.
+Actual Result:   Numbered table of R101, R102, R103, R104, R105 with time, fare,
+                 "40/40"-style seats and status "Available".
+Status: PASS
+
+------------------------------------------------------------------
+TC-02 | Search Hyderabad
+Input/Action:    Menu 2, then "Hyderabad"
+Expected Result: Routes departing from or arriving at Hyderabad appear.
+Actual Result:   R101 | Karachi -> Hyderabad
+                 R103 | Hyderabad -> Mirpur Khas
+                 R105 | Sukkur -> Hyderabad
+                 (R102 and R104 are not shown.)
+Status: PASS
+
+------------------------------------------------------------------
+TC-03 | Unknown city
+Input/Action:    Menu 2, then "Atlantis"
+Expected Result: No-match message; program continues.
+Actual Result:   "No routes found for 'Atlantis'." and the menu is shown again;
+                 the program later exits normally with option 8.
+Status: PASS
+
+------------------------------------------------------------------
+TC-04 | Book two seats
+Input/Action:    Menu 3, then Ahmed / 24 / R101 / 2; then Menu 1
+Expected Result: Booking confirmed for Rs. 2,400; R101 availability drops by 2.
+Actual Result:   "Booking confirmed!", "Booking ID: B1001", "Total fare: Rs. 2400",
+                 "Status: Confirmed". Route list then shows R101 seats "38/40".
+Status: PASS
+
+------------------------------------------------------------------
+TC-05 | Zero seats
+Input/Action:    Menu 3, then Ahmed / 24 / R101 / 0; then Menu 4 and Menu 1
+Expected Result: Reject; no booking or seat change.
+Actual Result:   "Booking failed: Seat quantity must be a positive whole number."
+                 Menu 4 shows "No bookings found."; R101 still "40/40".
+Status: PASS
+
+------------------------------------------------------------------
+TC-06 | Too many seats
+Input/Action:    Menu 3, then Ahmed / 24 / R101 / 41; then Menu 1
+Expected Result: Reject; availability never becomes negative.
+Actual Result:   "Booking failed: Only 40 seat(s) available on R101."
+                 R101 still "40/40".
+Status: PASS
+
+------------------------------------------------------------------
+TC-07 | Cancel confirmed booking
+Input/Action:    Book Ahmed / 24 / R101 / 2 (gets B1001); Menu 5, then "B1001"; Menu 4
+Expected Result: Status changes and correct seats are restored.
+Actual Result:   "Booking B1001 has been cancelled.", "Seats restored: 2",
+                 "Route R101 available seats: 40". Menu 4 still lists B1001 with
+                 status "Cancelled".
+Status: PASS
+
+------------------------------------------------------------------
+TC-08 | Cancel same booking again
+Input/Action:    After TC-07 steps, Menu 5, then "B1001" again; then Menu 6 / n
+Expected Result: Reject; no additional seat restoration.
+Actual Result:   "Cancellation failed: Booking B1001 is already cancelled."
+                 Seat availability shows R101 "40/40" (not 42/40).
+Status: PASS
+
+------------------------------------------------------------------
+TC-09 | Report with no bookings
+Input/Action:    Fresh start, Menu 7
+Expected Result: Booking totals/revenue zero; route status still counted.
+Actual Result:   "Total bookings created: 0", "Confirmed bookings: 0",
+                 "Cancelled bookings: 0", "Seats currently reserved: 0",
+                 "Confirmed revenue: Rs. 0", "Fully booked routes: 0".
+                 Route schedule still printed ("No scheduled departures." for
+                 Mirpur Khas and Lahore).
+Status: PASS
+
+------------------------------------------------------------------
+TC-10 | Book all seats
+Input/Action:    Menu 3, then Sara / 30 / R105 / 30; then Menu 6 / n; then Menu 7
+Expected Result: Booking succeeds; availability zero; Fully Booked status.
+Actual Result:   "Booking confirmed!"; seat availability shows R105 "0/30  Fully Booked";
+                 report shows "Fully booked routes: 1".
+                 (Extra check in test_core.py: booking 1 more seat on R105 is rejected.)
+Status: PASS
+
+------------------------------------------------------------------
+TC-11 | Report after cancellation
+Input/Action:    Book Ahmed / 24 / R101 / 2 (B1001, Rs. 2400); book Sara / 30 / R103 / 3
+                 (B1002, Rs. 2400); Menu 5 "B1001"; Menu 7
+Expected Result: Cancelled count increases; cancelled fare excluded.
+Actual Result:   "Total bookings created: 2", "Confirmed bookings: 1",
+                 "Cancelled bookings: 1", "Seats currently reserved: 3",
+                 "Confirmed revenue: Rs. 2,400" (only Sara's booking; Ahmed's
+                 cancelled Rs. 2400 is excluded).
+Status: PASS
+
+------------------------------------------------------------------
+TC-12 | Invalid menu option
+Input/Action:    Menu inputs "abc", "99", "" (just Enter), "0", then "8"
+Expected Result: Helpful error; program returns to menu.
+Actual Result:   "Invalid choice. Please enter a number from 1 to 8." printed 4 times,
+                 menu shown again each time, then "Thank you for using Smart Bus. Goodbye!"
+Status: PASS
+
+------------------------------------------------------------------
+EXTRA CHECKS (test_core.py and test_main.py, all PASS)
+- All 5 starter routes keep their original fares (1200, 2000, 800, 5000, 1500).
+- Search is case-insensitive; route ID search returns exactly one route; blank search returns nothing.
+- Rejected without any change: blank/space-only name, age "abc", 0, -5, "24.5", 200, True,
+  unknown route R999, seats 0, -2, "two", 2.9, and 41 (more than capacity).
+- 10 bookings in a row get 10 different IDs; a cancelled ID (B1001) is never reused.
+- Overbooking after a partial booking is rejected (25 booked, 6 more requested, 5 left).
+- Unknown booking ID cannot be cancelled; cancelled bookings stay in history.
+- Report with 3 bookings (1 cancelled): revenue 47,400 and seats 33 count Confirmed only.
+- Per-route report and schedule grouping give the expected numbers.
+- Status labels change Available -> Partially Booked -> Fully Booked correctly.
+- If input ends suddenly (no option 8), the program closes politely with no error.
+
+------------------------------------------------------------------
+SUMMARY: 12 / 12 PRD test cases PASS. 32 / 32 automated tests PASS.
